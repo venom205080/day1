@@ -4,6 +4,10 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 import random as r
+import redis
+import json
+rc = redis.Redis(host='localhost', port=6379, decode_responses=True)
+
 # from typing import Annotated
 
 import requests as req
@@ -59,6 +63,25 @@ async def set_notes(title: str=Form(), desc: str= Form()):
     dummy_DB.append({"title": title, "desc": desc})
     return RedirectResponse(url="/notes", status_code=303)
 
+
+@app.get("/photos")
+async def get_photos(request: Request):
+    cacheValue = rc.get("data")
+    if cacheValue:
+        return cacheValue
+    URL = "https://gist.githubusercontent.com/diondree/92e4518ca7529e1f4d1300993e5cc287/raw/5e689bb33a11a2e55cb11e6f413ddea14c4be804/mock-data-10000.json"
+    res = req.get(URL).json()
+    await rc.set("data", str(res))
+    await rc.expire("data", 100)
+    return res
+
+
+@app.get("/photoswithoutredis")
+async def get_photos_without_redis(request: Request):
+
+    URL = "https://gist.githubusercontent.com/diondree/92e4518ca7529e1f4d1300993e5cc287/raw/5e689bb33a11a2e55cb11e6f413ddea14c4be804/mock-data-10000.json"
+    res = req.get(URL).json()
+    return res
 
     
 
